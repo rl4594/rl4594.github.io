@@ -1,0 +1,1380 @@
+/* ============================================================
+   暮色主题 · 自定义样式
+   ------------------------------------------------------------
+   由 _config.butterfly.yml 的 inject.head 引入，排在主题的
+   css/index.css 之后加载，所以同优先级下本文件的规则胜出。
+
+   配色（暮色紫 / 落日琥珀）在两处定义，各管一半，改的时候别漏：
+     _config.butterfly.yml 的 theme_color   主题色，编译期内联进 CSS，覆盖不到
+     本文件的 :root                         其余变量、间距、阴影、圆角
+   ============================================================ */
+
+:root {
+  /* —— 页面底色 ——
+     壁纸不再是整站背景，只留在顶部横幅上（index_img / default_top_img）。
+     页面本身是一层很淡的暮色渐变：上面借横幅的紫，下面接落日的暖。
+     卡片也因此从「玻璃压在壁纸上」变成「白纸压在桌上」—— 分离靠阴影，
+     不再靠透明度和模糊。
+
+     这段渐变写在 CSS 而不是 _config.butterfly.yml：配置里那个 background
+     只能是**一个值**（getBgPath 只把 #/rgb/hsl 开头的当颜色，其余一律塞进
+     background 简写），而亮暗两种模式要两条不同的渐变。配置里留的那个浅紫
+     只作为 CSS 没加载时的兜底。
+
+     #web_bg 是 position: fixed 铺满视口的，所以分段比例相对的是视口高度
+     而不是文档高度 —— 不管页面多长，顶部总是那一抹紫、底部总是那一抹暖。
+     两层：一层从视口上沿往下衰减的紫光斑（呼应横幅），一层竖向的冷暖过渡。
+
+     最后一层的色标全部不透明，这点是故意的：主题给 #web_bg 内联了一个
+     background-color（配置里那个兜底色），内联样式压不过 —— 但只要渐变
+     自己不透明，那个内联色就永远看不见，不必用 !important 去跟它较劲。 */
+  --page-gradient:
+    radial-gradient(120% 60% at 50% 0%, rgba(108, 92, 231, .07) 0%, rgba(108, 92, 231, 0) 70%),
+    linear-gradient(180deg, #F2EEFB 0%, #F5F2FA 40%, #F7F2F6 70%, #F9F2ED 100%);
+
+  /* —— 暮色调色板 ——
+     和 _config.butterfly.yml 里 theme_color 的值保持一致 */
+  --dusk-violet: #6C5CE7;
+  --dusk-violet-soft: #B9B0F0;
+  --dusk-amber: #E8833A;
+  --dusk-ink: #2F3440;
+  --dusk-muted: #7A7590;
+
+  /* —— 卡片面 ——
+     不透明的纯白。原来的毛玻璃整套都去掉了：半透明底、backdrop-filter、
+     四层边缘高光、面上反光 —— 那四样都是为「让壁纸透上来还好看」服务的，
+     壁纸从卡片背后撤走之后它们就只剩副作用：半透明底把页面渐变的颜色混进
+     卡片，模糊没有东西可糊，高光压在纯白上是一块脏斑。
+
+     --card-bg 是主题的变量（首页卡片、侧边栏部件、正文容器、归档时间轴、
+     分页按钮都引用它），改这一个值就够，不需要逐个硬怼选择器。
+     主题在 :root 和 [data-theme='dark'] 里各定义了一次，本文件加载更晚，
+     同优先级下后者胜出。 */
+  --card-bg: #FFFFFF;
+
+  --card-radius: 16px;
+
+  /* —— 卡片描边 ——
+     一条极淡的内描边。这不是玻璃边缘的残留，是实心卡片在浅色底上需要的
+     那点轮廓：阴影最弱的地方正是卡片顶边，纯白压浅紫，没有这条线顶部会
+     显得毛。
+
+     用 inset 阴影而不是 border：inset 零布局影响，而且跟着圆角走。
+     没有并进 --card-shadow，是因为那个变量还被正文图片、上下篇、相关文章
+     引用 —— 描边是「一张卡片面」的属性，那几处不是卡片面，不该跟着有。 */
+  --card-rim: inset 0 0 0 1px rgba(38, 28, 72, .08);
+
+  /* —— 阴影 ——
+     卡片和背景的分离现在全靠它（以前还有半透明底和边缘高光分担），所以比
+     玻璃那会儿要明确一些，但仍然是「柔和」的做法：三层从近到远，最近那层
+     小偏移小模糊，交代卡片和背景的接触；中间那层是主要的起翘感；最远那层
+     大模糊低透明度，是漫射的环境光。层数多、每层都淡，光才散得开，不会在
+     边缘聚成一条硬线。
+
+     注意别用大负扩散 —— 那会把阴影收成一条紧贴卡片的边，正是「硬」的来源。 */
+  --card-shadow:
+    0 1px 2px rgba(38, 28, 72, .05),
+    0 4px 12px -2px rgba(38, 28, 72, .06),
+    0 12px 32px -8px rgba(38, 28, 72, .10);
+  --card-shadow-hover:
+    0 2px 6px rgba(38, 28, 72, .06),
+    0 10px 24px -4px rgba(38, 28, 72, .10),
+    0 24px 56px -12px rgba(38, 28, 72, .18);
+
+  /* 导航栏（滚动固定后那一条）底下的一层。单独一个变量，是因为它不需要
+     三层那种立体感 —— 它贴着页面顶上，只要一条能把下面内容分开的软边就够。 */
+  --nav-shadow:
+    0 1px 2px rgba(38, 28, 72, .05),
+    0 6px 20px -6px rgba(38, 28, 72, .12);
+
+  /* 缓动统一走这条。ease 的加减速比较急，ease-out 的曲线尾巴长，
+     位移停下来的时候更「软」。 */
+  --ease-soft: cubic-bezier(.22, .61, .36, 1);
+}
+
+[data-theme='dark'] {
+  /* 暗色下的渐变要的是「深」而不是「黑」，给一点紫调，卡片压上去才有分层。
+     壁纸撤走之后 #web_bg 上那层 70% 的黑色压罩也一并去掉了（见第 1 节），
+     所以暗度得自己给足 —— 别再指望有东西替你压。 */
+  --page-gradient:
+    radial-gradient(120% 60% at 50% 0%, rgba(108, 92, 231, .16) 0%, rgba(108, 92, 231, 0) 70%),
+    linear-gradient(180deg, #17151F 0%, #151320 45%, #16131C 100%);
+
+  /* 暗色卡片比页面底色亮一档。这一档明度差是必给的：没有了半透明底和边缘
+     高光，暗色下「这里有一张卡片」全靠它，底色和卡片一样深就完全看不出边界。
+     （正是为了保住这一档差，上面才要把 #web_bg 那层压罩去掉 —— 多压 70%
+     黑，卡片和底色会一起沉到纯黑里，谁也看不出谁。）
+
+     值从 #1D1B26 提到 #252330：原来和页面底色的对比只有 1.06:1，比亮色那对
+     （1.11:1）还弱，暗色下卡片轮廓是糊的。现在是 1.17:1，和亮色站在同一档。 */
+  --card-bg: #252330;
+  --card-rim: inset 0 0 0 1px rgba(255, 255, 255, .07);
+
+  --dusk-ink: #D8D5E4;
+  --dusk-muted: #918CA6;
+  /* 暗色下阴影本来就难看清，而且这里靠的是「卡片比底色亮」而不是「卡片
+     下面有影子」，层数比亮色少一层就够，多了反而发灰。 */
+  --card-shadow:
+    0 1px 2px rgba(0, 0, 0, .30),
+    0 10px 28px -8px rgba(0, 0, 0, .50);
+  --card-shadow-hover:
+    0 2px 6px rgba(0, 0, 0, .35),
+    0 20px 48px -12px rgba(0, 0, 0, .65);
+
+  --nav-shadow:
+    0 1px 2px rgba(0, 0, 0, .30),
+    0 6px 20px -6px rgba(0, 0, 0, .45);
+}
+
+/* ------------------------------------------------------------
+   0. 对齐 theme_color 管不到的变量
+   ------------------------------------------------------------
+   上面配色那一节只管主题色（链接、按钮、强调线）。正文色、
+   标题色、引用和目录的灰、卡片阴影这几个变量是主题另外写死的，
+   theme_color 碰不到，得在这里补。
+
+   为什么非得改：主题默认的正文色 #4c4948 和目录色 #666261 都是
+   偏暖的灰，压在我们的紫调卡片上会显脏；标题色 #1f2d3d 则是
+   深藏青，和正文字色不同源。统一成一套冷调墨色后整页才是一体的。
+
+   暗色模式必须单独写一遍：本文件的 :root 优先级低于主题的
+   [data-theme='dark']，只改 :root 的话暗色下会被主题的浅色值盖回去。
+   ------------------------------------------------------------ */
+:root {
+  --font-color: var(--dusk-ink);
+  --text-highlight-color: #2A2E3C;
+  --blockquote-color: var(--dusk-muted);
+  --toc-link-color: var(--dusk-muted);
+  --tab-button-color: var(--dusk-ink);
+  /* 主题原来的阴影是 0 3px 8px 6px 的大面积蓝黑，压在暮色渐变上发灰。
+     这里换成向下的短阴影，色调跟着紫走。var() 会按暗色模式下的
+     --card-shadow 求值，所以这一句两种模式都管用。 */
+  --card-box-shadow: var(--card-shadow);
+  --card-hover-box-shadow: var(--card-shadow-hover);
+}
+
+[data-theme='dark'] {
+  --font-color: var(--dusk-ink);
+  --text-highlight-color: #EFEDF8;
+  --blockquote-color: #A9A4BD;
+  --toc-link-color: #A9A4BD;
+  --tab-button-color: var(--dusk-ink);
+}
+
+/* ------------------------------------------------------------
+   1. 页面底色
+   ------------------------------------------------------------
+   渐变本身在变量那一节定义，这里只把它落到 #web_bg 上，外加处理暗色
+   模式下主题自己压的那层黑。
+
+   这是整页唯一一处背景，卡片、导航、页脚都压在它上面 —— 想调亮暗、
+   调冷暖，改的是上面的 --page-gradient，别在这里换颜色。
+   ------------------------------------------------------------ */
+#web_bg {
+  background-image: var(--page-gradient);
+}
+
+[data-theme='dark'] #web_bg:before {
+  /* 主题在暗色下给 #web_bg 加了一个 :before，background-color: rgba(0,0,0,.7)。
+     那是为壁纸准备的：壁纸太亮，暗色模式不压下去正文没法看。
+     现在底下是一层已经调好的深色渐变，再压 70% 黑就只剩纯黑了，卡片压上去
+     完全没有分层 —— 而那一档明度差正是暗色下唯一的边界（见 --card-bg）。
+
+     只清它一层，不删这一条规则：:before 上还挂着 position/width/height，
+     没有别的规则再定义它，删掉和留着一条透明的没有区别，留着更容易看出
+     这里被处理过。 */
+  background-color: transparent;
+}
+
+/* ------------------------------------------------------------
+   2. 卡片面
+   选择器直接取自主题里所有使用 var(--card-bg) 的规则，保持一致。
+   这里只做三件事：圆角、阴影、描边 —— 模糊和面上反光那两节连着
+   一起删掉了，实心卡片不需要。
+
+   .cardHover 这一行不能少：它是主题的 @extend 基类（侧边栏部件、分页
+   按钮、404 页、归档时间轴都从这里继承），漏掉的话那些元素会退回主题的
+   --card-hover-box-shadow，和这套阴影不是一套。当然，下一节的悬停态也
+   一并管着它们。
+   ------------------------------------------------------------ */
+.cardHover,
+.layout > div:first-child:not(.nc),
+#recent-posts .recent-post-item,
+#aside-content .card-widget,
+.layout .pagination > *:not(.space) {
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow), var(--card-rim);
+}
+
+/* 悬停时轻轻抬起。位移只有 3px，够让人感觉到「这是可以点的」，
+   又不至于让整页在鼠标扫过时跳来跳去。
+
+   抬起来和影子变深是同一件事的两半，所以两个变量一起换：只动位移会像
+   一张贴纸在滑，只换阴影又像原地深呼吸。--card-shadow-hover 比常态更远
+   更大，正好接住抬起来之后多出来的那段距离。 */
+#recent-posts .recent-post-item,
+#aside-content .card-widget {
+  transition: transform .38s var(--ease-soft), box-shadow .38s var(--ease-soft);
+}
+
+#recent-posts .recent-post-item:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--card-shadow-hover), var(--card-rim);
+}
+
+/* 卡片之间的间隔放宽一点，密集的卡片墙本身就显硬 */
+#recent-posts .recent-post-item {
+  margin-bottom: 26px;
+}
+
+/* 封面悬停缩放从主题的 1.1 收到 1.04。
+   1.1 在 370px 宽的封面上是实打实的 37px 位移，鼠标扫过一排卡片时
+   整片图都在跳。柔和的做法是几乎看不出放大，只觉得画面「活了」。
+   选择器和主题逐字相同，靠加载顺序取胜。 */
+#recent-posts .recent-post-item .post_cover .post-bg {
+  -webkit-transition: filter 375ms ease-in .2s, -webkit-transform .7s var(--ease-soft);
+  transition: filter 375ms ease-in .2s, transform .7s var(--ease-soft);
+}
+
+#recent-posts .recent-post-item:hover .post-bg {
+  -webkit-transform: scale(1.04);
+  transform: scale(1.04);
+}
+
+/* ------------------------------------------------------------
+   3. 顶部导航栏
+   下面这四种状态是「导航栏有自己底色」的状态 —— 滚动之后固定在顶上
+   （nav-fixed），或者页面本来就没有横幅（not-top-img）。主题给它们写的是
+   rgba(255,255,255,.8) / .7 再配一层 blur(7px)，而且只有亮色那一种状态
+   带了 -webkit- 前缀，Safari 下不生效。
+
+   现在整站没有壁纸可透，模糊没有东西可糊，半透明底只会让下面滚过去的
+   卡片隐隐透出来 —— 这正是刚被去掉的那套玻璃语言，导航栏不能是最后一个
+   漏网的。改成和卡片同一个实心面，边界交给下面那层软影。
+
+   压在横幅上的那一种状态（#page-header 有横幅、还没滚动）不在这里 ——
+   那一条必须保持透明，字才压在壁纸上。
+
+   选择器和主题里的一字不差，靠加载顺序取胜。
+   ------------------------------------------------------------ */
+#page-header.nav-fixed #nav,
+#page-header.not-top-img #nav,
+[data-theme='dark'] #page-header.nav-fixed > #nav,
+[data-theme='dark'] #page-header.not-top-img > #nav {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background: var(--card-bg);
+  /* 主题原来那道是 0 5px 6px -5px 的中性灰（rgba(133,133,133,.6)），压在暮色
+     渐变上偏脏，而且太贴边。换成 --nav-shadow，色调跟着紫走。 */
+  box-shadow: var(--nav-shadow);
+}
+
+/* —— 3.1 菜单项 ——
+   主题是靠给每一项 padding-left: 14px 把菜单项排开的，所以整组「左松右紧」，
+   而且每项的可点区域只有图标和文字本身那么大，鼠标要精准停在字上。
+   菜单项从 2 个加到 6 个之后这个问题就明显了。
+
+   改成每项自己带一圈内边距、间距交给容器的 padding —— 这样可点区域是个
+   完整的圆角块，下面加悬停底色才不会出现大小不一的色块。
+
+   注意所有选择器都必须锁在 #nav 里：主题把同一份菜单又渲染了一遍给移动端
+   的侧边栏（#sidebar #sidebar-menus .menus_items），选择器松一格就会连那边
+   一起改到。
+
+   .site-page 从 inline 改成 inline-block：悬停底色要一个真正的盒子才画得
+   整齐，当前项下面那道小横线也需要一个定位参照。 */
+#nav .menus_items .menus_item,
+#nav #search-button {
+  padding: 0 3px;
+}
+
+#nav .menus_items .menus_item > .site-page,
+#nav #search-button > .site-page {
+  display: inline-block;
+  padding: 6px 11px;
+  border-radius: 999px;
+  transition: background-color .22s var(--ease-soft), color .22s var(--ease-soft);
+}
+
+/* 悬停底色。
+   压在横幅壁纸上的时候用白色叠加；但滚动之后导航栏自己的底色是白的
+   （--card-bg，见上一节），白色叠在白色上完全看不出来，所以亮色 + 导航栏
+   有底色的两种状态下换成主题紫的淡色。暗色模式不用换 —— 那边的导航栏底色
+   是深色的，白色仍然读得出来。 */
+:root {
+  --nav-item-hover: rgba(255, 255, 255, .16);
+}
+
+[data-theme='light'] #page-header.nav-fixed,
+[data-theme='light'] #page-header.not-top-img {
+  --nav-item-hover: rgba(108, 92, 231, .14);
+}
+
+#nav .menus_items .menus_item > .site-page:hover,
+#nav #search-button > .site-page:hover {
+  background-color: var(--nav-item-hover);
+}
+
+/* 当前所在栏目的标记。主题不标当前页，类名由 inject.bottom 里那段小脚本
+   打上（见 _config.butterfly.yml）。
+   用一道小横线而不是变色或填底色：导航栏在「压在壁纸上」和「有自己底色」
+   两种状态下的文字颜色是两套，任何写死的颜色都会在其中一种状态下失效；
+   currentColor 会跟着当前状态走，两种都对。 */
+#nav .menus_items .menus_item > .site-page.active::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  width: 16px;
+  height: 2px;
+  margin-left: -8px;
+  border-radius: 1px;
+  background: currentColor;
+  opacity: .8;
+}
+
+#nav .menus_items .menus_item > .site-page {
+  position: relative;
+}
+
+/* ------------------------------------------------------------
+   4. 首页横幅遮罩
+   主题的遮罩是 #page-header:not(.not-top-img):before 上的一句
+   background-color: var(--mark-bg)。注意是 background-**color**，
+   所以往 --mark-bg 里塞渐变是无效的（整条声明会被丢弃，
+   遮罩直接消失，白字压在亮壁纸上没法看）。必须整条规则覆盖。
+
+   壁纸上方是紫、右下是琥珀，所以遮罩也走一遍同样的冷暖过渡，
+   既是压暗也是呼应。透明度按「标题所在的中段要够暗」来定。
+   ------------------------------------------------------------ */
+#page-header:not(.not-top-img):before {
+  background: linear-gradient(
+    180deg,
+    rgba(24, 18, 44, .62) 0%,
+    rgba(24, 18, 44, .38) 38%,
+    rgba(46, 26, 40, .42) 72%,
+    rgba(92, 44, 22, .58) 100%
+  );
+}
+
+/* 站名和副标题在壁纸上加一点阴影。原来是单层 12px、透明度 .55 的硬影，
+   压在字下面像描了个边。改成两层：一层极小半径的贴边影交代字形轮廓，
+   一层大半径低透明度的做扩散，字和背景之间的过渡就化开了。 */
+#page-header #site-title,
+#page-header #site-subtitle,
+#page-header #post-info .post-title {
+  text-shadow:
+    0 1px 3px rgba(20, 12, 40, .30),
+    0 4px 24px rgba(20, 12, 40, .38);
+}
+
+/* 副标题（站名下面打字机打出来的那行）走斜体。
+   —— 这是合成倾斜，不是真斜体 ——
+   全站字体是 Noto Sans SC，它**没有斜体字重**（Google Fonts 对
+   family=Noto+Sans+SC:ital,wght@1,400 直接返回 HTTP 400）。所以这条
+   font-style: italic 拿到的是浏览器**把正体字形整体歪一下**的合成倾斜，
+   不是真正的意大利体。
+
+   拉丁字母在合成倾斜下还算自然，所以现在的内容（Hello World）没问题。
+   中文就不行了 —— 汉字没有斜体传统，歪一下只会像「没摆正」。哪天副标题
+   换成中文，这里要么去掉斜体，要么另外引一款带真斜体的拉丁字体单给这行用。
+
+   （别去给字体请求加 ital 轴，那个请求本身就是 400。） */
+#page-header #site-subtitle {
+  font-style: italic;
+}
+
+/* ------------------------------------------------------------
+   5. 页脚
+   主题的页脚是 $light-blue 铺满 —— 而 $light-blue 就等于 $theme-color，
+   所以它原本是一整块 #6c5ce7 的高饱和紫。
+
+   规矩只有一条：**比页面底色深一档**，两种模式都是，只是「深」的方向随
+   模式变。亮色下页面是近白的浅紫渐变，页脚就是深一档的浅紫；暗色下页面
+   是深底，页脚就再深一点。
+
+   这里原来两种模式都用 #221C33（近黑的深紫）。暗色那半边是对的 —— 压在
+   #17151F 上只有 1.04:1，几乎融进页面，是一条安静的收尾。亮色那半边是错
+   的：整页是近白的渐变 + 白色卡片，最底下突然甩一块亮度 0.03 的深板，等
+   于在一个很轻的页面末端放了一记重锤，边界还是一条硬线 —— 这就是「违和」
+   的来源。所以现在跟着模式走。
+
+   亮色那个值 #DCD4EF 是量出来的：和页脚正上方的页面底色对比 1.29:1
+   （页面渐变暖端附近，#F8F2F1）。比卡片的 1.11:1 明显一档 —— 它是一条
+   带子，本来就该比一张卡片的边更清楚 —— 但远不到「重」。
+   再补一道 1px 的内描边收口，免得这条带子的上沿发毛。
+
+   注意 #web_bg 是 fixed 的，页脚周围的底色会跟着滚动位置变，上面这个对
+   比度取的是滚到底时最常见的那一段。
+
+   —— 文字色 ——
+   跟底色一起走，两种模式各一套。
+     亮色：正文 #4A4460（压在 #DCD4EF 上 6.43:1），链接 #5543CF（4.76:1）
+     暗色：正文 #D8D5E4（13.05:1），链接 --dusk-violet-soft（9.44:1）
+   链接在亮色下比全站链接色 --dusk-violet 更深一档，是因为这个底色比白底
+   暗 —— --dusk-violet 压上来只有 3.40:1，不够 4.5。
+
+   注意这里把 #footer 的 background-image 也清掉了 —— 配置里 footer_img
+   是 false，本来就没有页脚图；哪天要开 footer_img，得先删掉下面那句
+   background-image: none，否则页脚图不会显示（那时也要重新想这一节：
+   有图的页脚和一块纯色底不是一回事）。
+   ------------------------------------------------------------ */
+#footer {
+  --footer-bg: #DCD4EF;
+  --footer-ink: #4A4460;
+  --footer-link: #5543CF;
+  --footer-link-hover: #4B3BC4;
+  --footer-rim: inset 0 1px 0 0 rgba(38, 28, 72, .07);
+  background-color: var(--footer-bg);
+  background-image: none;
+  border-top: none;
+  box-shadow: var(--footer-rim);
+}
+
+[data-theme='dark'] #footer {
+  --footer-bg: #131019;
+  --footer-ink: #D8D5E4;
+  --footer-link: var(--dusk-violet-soft);
+  --footer-link-hover: #D6D0FA;
+  --footer-rim: inset 0 1px 0 0 rgba(255, 255, 255, .06);
+}
+
+/* 只写 #footer > *：链接在 footer 里是孙子辈，靠 #footer a 那一条单独给色
+   （它的优先级 1 个 id + 1 个元素，高过这里的 1 个 id，不用加 !important）。 */
+#footer > * {
+  color: var(--footer-ink);
+}
+
+#footer a {
+  color: var(--footer-link);
+}
+
+#footer a:hover {
+  color: var(--footer-link-hover);
+}
+
+/* ------------------------------------------------------------
+   6. 排版
+   ------------------------------------------------------------ */
+
+/* —— 版面宽度 ——
+   主题是 .layout 1200px、主列 74%、侧边栏 26%。换算下来正文一行是 786px：
+   16px 字号下一行能排约 99 个西文字符（或 49 个汉字）。西文的舒适区间是
+   45~75，中文常引的是 25~40 —— 两头都超，英文段落读起来要甩头。
+
+   这里把整个版面收到 1030px，并把侧边栏从 26% 提到 30%，主列降到 70%。
+   为什么动的是侧边栏比例而不是只给正文加 max-width：正文和版权卡片、标签
+   行、上下篇都在同一张卡片里，只收窄正文会让它们左右边缘错开。收版面则
+   整套一起收，边缘始终对齐。
+
+   算式（.layout 的 max-width 含左右各 15px 内边距）：
+     主列 = 0.70 × (1030 - 30) = 700px
+     正文 = 700 - 卡片左右各 40px 内边距 = 620px
+       → 一行约 78 个西文字符 / 39 个汉字，落在区间内
+   侧边栏 = 30% × 1000 = 300px，和原来的 304px 基本持平，内部不用改。
+
+   —— 为什么整个包在 @media (min-width: 901px) 里 ——
+   主题在 900px 以下把版面改成单列，把 #aside-content 放回 width: 100%。
+   那条规则和这里的 `#aside-content { width: 30% }` **优先级完全相同**
+   （都只是一个 id），而 custom.css 加载更晚 —— 不加这层媒体查询，我的
+   30% 会连移动端一起盖掉，缩放窗口时侧边栏会缩成窄窄的一条贴在左边。
+   （主列那边主题用了 !important，本来盖不掉，但一起收进来更好读。）
+
+   用 901px 而不是 900px：主题自己有一对 min-width: 900px / max-width: 900px
+   在 900px 这一点上重叠，避开它。
+
+   注意 .layout 的 max-width 是给「有侧边栏」的常态用的；主题另有一条
+   .layout.hide-aside 想给无侧边栏的页面放宽到 1000px，但那条规则要求
+   .layout 元素自己带 hide-aside 类，而主题只把类加在 <html> 上 —— 它其实
+   永远不生效。这里不跟着改一条同样不生效的规则。 */
+@media screen and (min-width: 901px) {
+  .layout {
+    max-width: 1030px;
+  }
+
+  .layout > div:first-child {
+    width: 70%;
+  }
+
+  #aside-content {
+    width: 30%;
+  }
+}
+
+/* 正文行高。这个值是跟着字体走的，换字体要一起调：
+   衬线（宋体）笔画对比强、字面小，要 1.9 才不显挤；
+   无衬线（黑体）字面大、行间本来就留白多，1.9 会散成一片，1.75 刚好。 */
+#article-container {
+  line-height: 1.75;
+  color: var(--dusk-ink);
+}
+
+#article-container p {
+  margin-bottom: 1.1em;
+}
+
+/* 标题行高收紧：按正文的行高排标题会散开。
+   字重不在这里定 —— 标题的粗细由 inject.head 里加载的字重决定，
+   见 _config.butterfly.yml 的说明。这里写死的 600 只是和它保持一致。 */
+#article-container h1,
+#article-container h2,
+#article-container h3,
+#article-container h4,
+#article-container h5,
+#article-container h6 {
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0;
+}
+
+/* 表格里的数字走等宽。中文字体的西文数字默认是按比例给宽度的，
+   一列数字的右边缘会参差不齐。 */
+#article-container table {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------
+   7. 正文链接
+   只给正文里的链接加下划线，且用 decoration-color 而不是 color 做区分：
+   鼠标扫过时只是下划线变实，颜色不动，段落不会因为一串链接而花掉。
+   要排除 .headerlink —— 那是标题右侧的锚点小图标，加了下划线很丑。
+   ------------------------------------------------------------ */
+#article-container a:not(.headerlink):not(.btn):not(.tag):not(.fancybox) {
+  text-decoration: underline;
+  text-decoration-color: rgba(108, 92, 231, .35);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  transition: text-decoration-color .2s ease;
+}
+
+#article-container a:not(.headerlink):not(.btn):not(.tag):not(.fancybox):hover {
+  text-decoration-color: currentColor;
+}
+
+/* ------------------------------------------------------------
+   8. 代码块
+   配色本身在 _config.butterfly.yml 的 code_blocks.theme（darker，
+   Material Palenight 系）。主题给 macStyle 自带圆角和阴影，
+   这里补一道描边，让深色块在白色卡片上有明确的边界。
+   ------------------------------------------------------------ */
+#article-container figure.highlight {
+  border: 1px solid rgba(108, 92, 231, .18);
+}
+
+[data-theme='dark'] #article-container figure.highlight {
+  border-color: rgba(255, 255, 255, .08);
+}
+
+/* 行内代码：主题只给了底色和文字色，方角夹在中文方块字里有点生硬 */
+#article-container code:not([class*='language-']) {
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+/* ------------------------------------------------------------
+   9. 引用块
+   ------------------------------------------------------------ */
+#article-container blockquote {
+  border-radius: 0 var(--card-radius) var(--card-radius) 0;
+  border-left-width: 4px;
+}
+
+/* ------------------------------------------------------------
+   10. 正文图片
+   ------------------------------------------------------------ */
+#article-container img {
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+}
+
+/* ------------------------------------------------------------
+   11. 侧边栏目录
+   ------------------------------------------------------------ */
+#card-toc .toc-content .toc-link.active {
+  border-radius: 4px;
+}
+
+/* ------------------------------------------------------------
+   12. 选中与滚动条
+   ------------------------------------------------------------ */
+::selection {
+  background: var(--dusk-violet);
+  color: #fff;
+}
+
+/* 细滚动条。默认宽度在 Windows 上是 17px，压在卡片上很笨重。 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+  background: var(--dusk-violet-soft);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--dusk-violet);
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ------------------------------------------------------------
+   13. 首页卡片：封面与正文的交界斜切
+   ------------------------------------------------------------
+   index_layout: 3 是左右交替的，所以两侧都要处理：封面在左时斜切它的
+   右边缘，在右时斜切左边缘，镜像过来 —— 这样并排两张卡片是对称的锯齿
+   而不是一边倒。
+
+   斜切加在 .post_cover 容器上，不是里面的 img：封面图悬停时会 scale(1.1)，
+   加在图上斜边会跟着一起缩放跑掉；加在容器上，图在裁切框里缩放，斜边不动。
+
+   clip-path 会给元素创建层叠上下文。主题里封面图是 z-index: -4，原本相对
+   外层上下文定位，被圈进局部之后反而更可控 —— 实测封面正常显示。
+   ------------------------------------------------------------ */
+:root {
+  /* 斜切的水平偏移量。卡片高 18.8em（≈300px），60px 约合 11° 斜角。
+     想平缓就调小，想更陡就调大。 */
+  --cover-slant: 60px;
+}
+
+#recent-posts .recent-post-item .post_cover.left {
+  -webkit-clip-path: polygon(0 0, 100% 0, calc(100% - var(--cover-slant)) 100%, 0 100%);
+  clip-path: polygon(0 0, 100% 0, calc(100% - var(--cover-slant)) 100%, 0 100%);
+}
+
+#recent-posts .recent-post-item .post_cover.right {
+  -webkit-clip-path: polygon(0 0, 100% 0, 100% 100%, var(--cover-slant) 100%);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, var(--cover-slant) 100%);
+}
+
+/* 窄屏下封面变成整宽横条叠在正文上方，左右关系不存在了，斜切也就没意义。
+   这里的选择器比主题的窄屏规则多带了 .left/.right，优先级够压住它。 */
+@media screen and (max-width: 768px) {
+  #recent-posts .recent-post-item .post_cover.left,
+  #recent-posts .recent-post-item .post_cover.right {
+    -webkit-clip-path: none;
+    clip-path: none;
+  }
+}
+
+/* ------------------------------------------------------------
+   14. 侧边栏与若干细节
+   ------------------------------------------------------------ */
+
+/* 主题把公告的图标写死成纯红 #f00 —— 在整个暮色紫/琥珀的色板里，
+   那个红喇叭是唯一一个不属于这套配色的元素，非常跳。换成琥珀色：
+   公告本来就是「提醒」语义，暖色也贴切。 */
+#aside-content .card-announcement .item-headline i {
+  color: var(--dusk-amber);
+}
+
+/* 头像。主题的 avatar.effect 是一个「2 秒转一整圈、无限循环」的动画，
+   太急了 —— 常驻的全速旋转会一直抢注意力，和这套柔和的调子相反。
+   放慢到 16 秒一圈，变成一种几乎察觉不到的缓慢流动：保留「活着」的
+   感觉，但不再分神。
+   顺带补一圈紫色描边，把这个最像「主题默认」的元素拉进配色里。 */
+.avatar-img {
+  -webkit-animation-duration: 16s;
+  animation-duration: 16s;
+  box-shadow:
+    0 0 0 1px rgba(108, 92, 231, .30),
+    0 0 0 6px rgba(108, 92, 231, .10);
+}
+
+/* 首页卡片的摘要。主题让它和正文同色，于是整张卡片是「深色标题 + 同样深
+   的摘要」，层次出不来。压到次要色，标题才跳得出来。 */
+#recent-posts .recent-post-item > .recent-post-info > .content {
+  color: var(--dusk-muted);
+}
+
+/* ------------------------------------------------------------
+   置顶文章的标记
+   ------------------------------------------------------------
+   .sticky 是标题旁边那个「置顶」小标签，主题写死成 #ff7242 —— 一个橙红，
+   既不在暮色调色板里（这套只有紫 #6C5CE7 和琥珀 #E8833A），压在白色卡片上
+   也只有 2.71:1，不够 4.5。
+
+   换成琥珀，但不能直接用 --dusk-amber：它压在白卡上同样是 2.71:1（纯属巧合，
+   两个色亮度接近）。亮色下要用更深的琥珀 #B85D18（4.55:1），暗色下才用回
+   本色琥珀（压在 #252330 上 6.26:1）。和链接色是同一套做法：亮色深、暗色浅。
+
+   现在没有置顶文章，页面上看不到它 —— 这条是给以后真的置顶时准备的。 */
+#recent-posts .recent-post-item > .recent-post-info > .article-title .sticky {
+  color: #B85D18;
+}
+
+[data-theme='dark'] #recent-posts .recent-post-item > .recent-post-info > .article-title .sticky {
+  color: var(--dusk-amber);
+}
+
+/* —— 主题的中性灰面板 ——
+   --sidebar-bg 是主题给「弹出面板」用的底色，两处引用：
+     桌面端导航的二级下拉菜单（#nav .menus_item_child）
+     移动端展开的侧边栏（#sidebar #sidebar-menus）
+   主题的值是 #f6f8fa（冷灰）/ #121212（纯中性黑），是整站最后两块没跟上
+   紫调的地方 —— 页面是 #F5F2FA / #17151F，卡片是 #FFF / #252330，只有它们
+   还是冷灰。暗色下尤其明显：#121212 比页面底色更中性也更暗，面板看着像是
+   贴在页面上的另一层材质。
+
+   改成：亮色直接跟页面底色同色；暗色比页面底色亮一档（#1D1B26），和卡片
+   同一个规矩 —— 它是浮在页面之上的面板，不是页面本身。 */
+:root {
+  --sidebar-bg: #F5F2FA;
+}
+
+[data-theme='dark'] {
+  --sidebar-bg: #1D1B26;
+}
+
+/* 键盘焦点环。主题没写 :focus-visible，全靠浏览器默认 —— Chrome 给的是
+   一圈深色细线，压在深色卡片上基本看不见。
+   用 :focus-visible 而不是 :focus：鼠标点击不会触发，只有 Tab 导航才出现，
+   鼠标用户不会觉得满屏都是框。这是无障碍相关的，别删。 */
+:focus-visible {
+  outline: 2px solid var(--dusk-violet);
+  outline-offset: 2px;
+}
+
+/* 右侧浮动按钮（主题切换、回到顶部）。
+   主题给的是 35px、圆角 5px、**没有阴影** 的实心主题色方块 —— 全站改完
+   卡片那套（16px 圆角 + 柔和阴影）之后，它成了页面上唯一一个既不带圆角
+   语言也不带阴影的元素。
+
+   圆角给到 12px 而不是卡片的 16px：按钮只有 35px 见方，16px 会接近正圆。
+   阴影单独用一个变量，因为 --card-shadow 那三层是给几百像素宽的卡片算的
+   扩散范围，压在 35px 的按钮上会糊成一团。
+
+   选择器和主题逐字相同（#rightside > div > button / a），靠加载顺序取胜。 */
+:root {
+  --float-btn-shadow:
+    0 2px 6px rgba(38, 28, 72, .16),
+    0 8px 20px -6px rgba(38, 28, 72, .20);
+}
+
+[data-theme='dark'] {
+  --float-btn-shadow:
+    0 2px 6px rgba(0, 0, 0, .40),
+    0 8px 20px -6px rgba(0, 0, 0, .55);
+}
+
+#rightside > div > button,
+#rightside > div > a {
+  border-radius: 12px;
+  box-shadow: var(--float-btn-shadow);
+}
+:focus-visible {
+  outline: 2px solid var(--dusk-violet);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------
+   15. 文章页
+   ------------------------------------------------------------
+   前面的规则基本只管首页和侧边栏，文章页是另一批元素 —— 主题给它们
+   写死的值（--light-grey 的硬边框、淡蓝辉光、400 的标题字重）和暮色紫
+   的调子对不上。这一节把文章页拉进同一套语言。
+
+   注意文章页的容器结构：整个 #post（正文 + 版权 + 标签 + 上下篇 +
+   相关文章）是**一张**卡片（见第 2 节，底色见变量那一节的 --card-bg）。
+   所以下面这些都是「卡片里的面板」，不要再给它们套一层卡片 ——
+   会变成俄罗斯套娃。
+   ------------------------------------------------------------ */
+
+/* —— 15.1 横幅上的文章标题 ——
+   主题给它写了 font-weight: normal（400）。正文和 h1-h6 都走 600
+   （见 inject.head 里关于字重的说明），横幅标题是页面上最大的一行字，
+   掉到 400 整页会显得没精神。
+
+   行高从主题的 1.5 收到 1.35：这个标题 -webkit-line-clamp 是三行，
+   40px 的字按 1.5 排，三行是 180px，而横幅总共才 400px 高，长标题会
+   一直顶到遮罩的上边缘。
+
+   字号这里不写 —— 主题在 768px 断点下把它降到 2.1em，写死就把那条
+   响应式规则盖掉了。 */
+#post-info .post-title {
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+/* —— 15.2 横幅上的元信息 ——
+   主题把日期、分类、字数、阅读量排成一串用竖线「|」分隔的灰字，压在
+   满屏壁纸上就是一条没有层次的细线。改成一组玻璃胶囊：每项一个圆角底，
+   项与项之间靠 flex 的 gap 分隔。
+
+   两个容易踩的点：
+   a) 竖线是 <span class="post-meta-separator">，而分类之间的箭头是
+      <i class="fas fa-angle-right post-meta-separator"> —— 同一个类名
+      但元素不同。下面只选 span，箭头不受影响。
+   b) 窄屏下主题把这两行改回 display: inline。这里的选择器和它同级
+      （都是两个 id + 一个类），靠加载顺序取胜，所以 flex 在两种宽度下
+      都生效 —— 胶囊必须是 flex 子项，换行时 gap 才不会塌掉。 */
+:root {
+  /* 胶囊的三个颜色。横幅上压在深色遮罩上，用白色系。 */
+  --meta-chip-bg: rgba(255, 255, 255, .12);
+  --meta-chip-border: rgba(255, 255, 255, .20);
+  --meta-chip-divider: rgba(255, 255, 255, .32);
+}
+
+/* 没设横幅的文章（front-matter 里 top_img: false）：标题和元信息直接
+   排在正文卡片上，白色胶囊在浅色卡片上等于隐形，所以整体换成紫色系。 */
+#post > #post-info {
+  --meta-chip-bg: rgba(108, 92, 231, .06);
+  --meta-chip-border: rgba(108, 92, 231, .16);
+  --meta-chip-divider: rgba(47, 52, 64, .22);
+}
+
+[data-theme='dark'] #post > #post-info {
+  --meta-chip-bg: rgba(255, 255, 255, .05);
+  --meta-chip-border: rgba(255, 255, 255, .10);
+  --meta-chip-divider: rgba(216, 213, 228, .22);
+}
+
+#post-info #post-meta .meta-firstline,
+#post-info #post-meta .meta-secondline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+}
+
+/* 用 :not() 把分隔线排除在胶囊之外 —— 它们也是 .meta-secondline 的
+   <span> 直接子元素，不排除的话会被当成一个空胶囊包起来 */
+#post-info #post-meta .meta-firstline > span:not(.post-meta-separator),
+#post-info #post-meta .meta-secondline > span:not(.post-meta-separator) {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 3px 10px;
+  border: 1px solid var(--meta-chip-border);
+  border-radius: 999px;
+  background: var(--meta-chip-bg);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  line-height: 1.6;
+}
+
+/* 行首那条竖线是多余的（.meta-secondline 是独立的一行，前面不需要分隔），
+   主题在桌面端本来就把它藏掉了；上面那句 display: inline-flex 会把它
+   重新显示出来，所以这里必须再藏一次。 */
+#post-info #post-meta > .meta-secondline > span.post-meta-separator:first-child {
+  display: none;
+}
+
+/* 胶囊内部的竖线不删掉，改画成一条 1px 细线 —— 删了的话
+   「创建: 2026-09-20 更新: 2026-09-22」会糊成一句，分不清是两个字段。
+   字符本身用 color: transparent 藏掉，高度取 .9em 跟随字号。 */
+#post-info #post-meta span.post-meta-separator {
+  display: inline-block;
+  overflow: hidden;
+  width: 1px;
+  height: .9em;
+  margin: 0 6px;
+  background: var(--meta-chip-divider);
+  color: transparent;
+}
+
+/* 没有横幅时元信息是排在浅色卡片上的，主题给它写死了 #78818a（见 head.styl
+   的 #post > #post-info），暗色模式下这个中灰压在深色卡片上对比度不够，
+   换成会在两种模式下各自求值的变量色。 */
+[data-theme='dark'] #post > #post-info #post-meta,
+[data-theme='dark'] #post > #post-info #post-meta a {
+  color: var(--dusk-muted);
+}
+
+/* —— 15.3 版权卡片 ——
+   主题给它一条 --light-grey 的硬边框，悬停时亮起一圈淡蓝辉光
+   （rgba(232, 237, 250, .6)）—— 那是配纯白背景用的，压在紫色卡片上
+   就是一块发灰的脏斑。改成紫色描边 + 极淡底，悬停换一圈紫色柔光。
+   圆角从主题的 6px 提到和卡片一致的 16px，嵌套关系才看得出来。 */
+#post .post-copyright {
+  border: 1px solid rgba(108, 92, 231, .18);
+  border-radius: var(--card-radius);
+  background: rgba(108, 92, 231, .045);
+  transition: box-shadow .3s var(--ease-soft), border-color .3s var(--ease-soft);
+}
+
+#post .post-copyright:hover {
+  border-color: rgba(108, 92, 231, .30);
+  box-shadow: 0 10px 28px -12px rgba(108, 92, 231, .45);
+}
+
+[data-theme='dark'] #post .post-copyright {
+  border-color: rgba(255, 255, 255, .09);
+  background: rgba(255, 255, 255, .035);
+}
+
+[data-theme='dark'] #post .post-copyright:hover {
+  border-color: rgba(255, 255, 255, .16);
+  box-shadow: 0 10px 28px -12px rgba(0, 0, 0, .7);
+}
+
+/* —— 15.4 标签与分享 ——
+   标签胶囊主题已经写成「主题色描边 + 主题色文字，悬停填色」，形状没问题，
+   只把描边压淡：一圈实心主题色描边，几个标签并排时会连成一条紫线。 */
+#post .tag_share .post-meta__tags {
+  border-color: rgba(108, 92, 231, .35);
+}
+
+/* 分享按钮是一排品牌彩色的图标，是文章页上唯一的多色元素（和侧边栏那个
+   红色喇叭是同一类问题，见第 14 节）。压到七成不透明度，悬停时恢复 ——
+   要找的时候找得到，平时不抢正文的注意力。 */
+#post .post-share .social-share-icon {
+  opacity: .7;
+  transition: opacity .2s ease, transform .2s var(--ease-soft);
+}
+
+#post .post-share .social-share-icon:hover {
+  opacity: 1;
+  transform: translateY(-2px);
+}
+
+/* —— 15.5 上下篇导航与相关文章 ——
+   这两块只在文章数 ≥ 2 时才出现，现在站点里只有一篇 hello-world，
+   页面上看不到 —— 写在这里是为了第二篇文章发出来时就是对的。
+
+   上下篇主题用 postImgHover：深色底 + 半透明封面，悬停时图放大、文字
+   上滑。交互本身没问题，缺的是和全站一致的圆角、阴影和悬停反馈。 */
+#pagination.pagination-post {
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+}
+
+/* 相关文章卡片同理。圆角一起提到 16px，和首页文章卡片对齐。 */
+#post .relatedPosts > .headline {
+  /* 主题写的是 700，而全站字体只提供到 600（见 inject.head），
+     写 600 让意图显式，不再依赖字体匹配的回退行为 */
+  font-weight: 600;
+  font-size: 1.3em;
+}
+
+#post .relatedPosts .relatedPosts-list > a {
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+  transition: transform .38s var(--ease-soft), box-shadow .38s var(--ease-soft);
+}
+
+#post .relatedPosts .relatedPosts-list > a:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--card-shadow-hover);
+}
+
+/* —— 15.6 正文细节 ——
+   下面几处是主题漏掉的，属于「默认样式露出来」而不是审美偏好。 */
+
+/* mark（==高亮==）主题完全没写，走浏览器默认的荧光黄底黑字 ——
+   在一片冷调里是一块刺眼的黄。换成主题紫的淡色底。
+   文字色用 inherit 而不是写死：这样亮色下是深墨字、暗色下是浅字，
+   一条规则管两种模式，不用再写 [data-theme='dark'] 那一份。 */
+#article-container mark {
+  padding: 0 4px;
+  border-radius: 4px;
+  background: rgba(108, 92, 231, .18);
+  color: inherit;
+}
+
+/* 表头主题用的是 #99a9bf 的 10% 冷灰，压在紫调卡片上偏青。换成紫调，
+   并给表头加一档字重，让表头和数据行分开。 */
+.table-wrap table thead {
+  background: rgba(108, 92, 231, .10);
+}
+
+.table-wrap table thead th {
+  font-weight: 600;
+}
+
+/* kbd（键盘按键）主题写死了浅色背景 #f8f8f8 和深色文字 #34495e，没有
+   暗色变体 —— 暗色模式下正文卡片是深色的，那个白块会亮得刺眼。
+   只补暗色这一份，亮色沿用主题的浅灰。 */
+[data-theme='dark'] #article-container kbd {
+  border-color: rgba(255, 255, 255, .18);
+  background-color: rgba(255, 255, 255, .08);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 1px 0 0 rgba(255, 255, 255, .06) inset;
+  color: var(--dusk-ink);
+}
+
+/* —— 15.7 链接颜色 ——
+   主题的默认链接色是 var.styl 里的 $a-link-color = #99a9bf，一个编译期
+   常量，不走 CSS 变量 —— 所以既改不动，暗色模式也覆盖不到它。而这个值
+   在两种模式下都不合格：
+
+     亮色：压在白色卡片上 2.39:1（版权卡片里的「rl」「文章链接」
+           「CC BY-NC-SA 4.0」现在全是这个颜色，看着像禁用状态）
+     暗色：正文链接是另一条规则给的 $theme-link-color = #6C5CE7，
+           压在深色卡片上约 3.49:1
+
+   AA 要求正文 4.5:1。这里补一个跟着模式走的变量：
+     亮色 #6C5CE7 → 白底 4.86:1（正文链接本来就是它，等于不变）
+     暗色 #B9B0F0 → 深色卡片上约 8.5:1
+   —— 正是 --dusk-violet / --dusk-violet-soft 这两个已有的色值。 */
+:root {
+  --link-color: var(--dusk-violet);
+}
+
+[data-theme='dark'] {
+  --link-color: var(--dusk-violet-soft);
+}
+
+/* 版权卡片里的链接。主题只给它写了 text-decoration，颜色一路落到
+   $a-link-color 上，所以亮色下这几个链接是整页最难读的文字。 */
+#post .post-copyright a {
+  color: var(--link-color);
+}
+
+/* 正文链接在暗色下要单独纠正一次。选择器和第 7 节保持一套，排除掉
+   锚点图标、按钮、标签和 fancybox —— 它们各自有颜色语义，不该被当成
+   正文链接处理。 */
+[data-theme='dark'] #article-container a:not(.headerlink):not(.btn):not(.tag):not(.fancybox) {
+  color: var(--link-color);
+}
+
+/* ------------------------------------------------------------
+   16. 搜索弹层
+   ------------------------------------------------------------
+   本地搜索的界面是主题自带的，默认是一块底色的面板
+   （--search-bg: #f6f8fa），只有 8px 圆角，和整站的卡片完全不是一套。
+   它是从顶部栏的搜索按钮点出来的，不处理就像是硬接上去的一块。
+
+   三处改动：
+
+   a) 底色 —— 直接把 --search-bg 指向 --card-bg，弹层就成了和卡片同一个
+      实心面。主题在弹层和输入框两处都引用这个变量，改一个值两处一起变。
+      暗色模式必须单独再写一遍：主题在 [data-theme='dark'] 里也定义了
+      --search-bg，那条优先级高于本文件的 :root（和第 0 节同一个道理）。
+      取到的颜色不写死，交给 --card-bg —— 那个变量自己跟着模式走。
+
+   b) 阴影与圆角 —— 和卡片引用同一套变量。模糊和边缘高光跟着卡片一起
+      去掉了：弹层压在 #search-mask 上，那层遮罩自己已经模糊过底下的页面，
+      弹层再糊一层没有东西可糊，反而会把自己糊灰。
+      圆角包在 min-width 里：主题在窄屏下把弹层改成全屏、圆角归零，不包
+      起来会把那条规则盖掉，全屏弹层四个角就圆了。
+
+   c) 正文色与关键字高亮 —— 主题给搜索结果链接和输入框文字用的是 #4c4948
+      （就是第 0 节里已经换掉的那个偏暖的灰）；关键字高亮写死 #F47466，
+      一个珊瑚红，是配色盘之外的第三个强调色（和原来那个红色喇叭同一类
+      问题）。都拉回主题色板。
+   ------------------------------------------------------------ */
+:root {
+  --search-bg: var(--card-bg);
+  --search-input-color: var(--dusk-ink);
+  --search-a-color: var(--dusk-ink);
+}
+
+[data-theme='dark'] {
+  --search-bg: var(--card-bg);
+  --search-input-color: var(--dusk-ink);
+  --search-a-color: var(--dusk-ink);
+}
+
+.search-dialog {
+  box-shadow: var(--card-shadow), var(--card-rim);
+}
+
+@media screen and (min-width: 769px) {
+  .search-dialog {
+    border-radius: var(--card-radius);
+  }
+}
+
+/* $search-keyword-highlight 是编译期常量，改不动变量，只能整条覆盖 */
+.search-keyword {
+  color: var(--dusk-violet);
+}
+
+[data-theme='dark'] .search-keyword {
+  color: var(--dusk-violet-soft);
+}
+
+/* 弹层里的分隔线。主题让它继承 .custom-hr —— 那是给正文准备的
+   「2px 虚线 + 一片叶子图标」，在搜索结果列表里太吵，换成一条安静的细线。
+   :before 是那条虚线中间的叶子图标，一并去掉。 */
+.search-dialog hr {
+  border: none;
+  border-top: 1px solid rgba(108, 92, 231, .18);
+}
+
+.search-dialog hr::before {
+  content: none;
+}
+
+[data-theme='dark'] .search-dialog hr {
+  border-top-color: rgba(255, 255, 255, .10);
+}
+
+/* —— 遮罩 ——
+   主题的遮罩是一层 60% 的黑。改小到 38% 并让它自己带一层模糊：底下那层
+   先被糊掉，视觉上已经退后了，就不必压那么黑。
+   颜色从纯黑换成带紫的深色，和整套配色同源。
+
+   弹层现在是实心的，不像以前那样需要「底下有亮的东西可以透」才不发灰，
+   但遮罩这层模糊别删：它把弹层和页面拉开距离，是弹层「浮在上面」的
+   主要来源，去掉了弹层就像直接贴在正文上。
+   （弹层本身不再叠模糊，见上一节的 b。） */
+#search-mask {
+  background: rgba(24, 18, 40, .38);
+  -webkit-backdrop-filter: blur(8px) saturate(140%);
+  backdrop-filter: blur(8px) saturate(140%);
+}
+
+[data-theme='dark'] #search-mask {
+  background: rgba(0, 0, 0, .45);
+}
+
+/* ------------------------------------------------------------
+   17. 卡片入场
+   ------------------------------------------------------------
+   卡片滚进视口时淡入上浮。整页的动效语言（卡片抬起、封面缩放、波浪漂移）
+   都是「慢起慢停」的，只有卡片列表到这一节为止还是「硬出现」。
+
+   —— 为什么是 CSS 滚动驱动动画，而不是 IntersectionObserver ——
+   试过两版脚本方案，都推翻了，理由记在这里，免得以后有人再走一遍：
+
+   脚本方案是「先用 CSS 把卡片藏起来，等 observer 回调再放出来」。问题在于
+   藏是立即生效的，放却依赖回调 —— 只要 observer 因为任何原因没回调（脚本
+   报错、被拦截、加载顺序不对），**整页卡片就永远是看不见的**，首页直接变
+   空白。拿这个代价换一段淡入不值得。
+
+   animation-timeline: view() 把这个关系反过来了：进度直接由卡片在视口里的
+   位置决定，没有「等回调」这一步。不支持这条属性的浏览器（Firefox、Safari）
+   整段 @supports 不成立，卡片**什么都不发生** —— 没有动画，也不会被藏起来。
+   最差的结果是「没动效」，不是「没内容」，这个差别是关键。
+
+   顺带解决了两件事：不用给 _config.butterfly.yml 的 inject.bottom 加脚本；
+   而且它是滚动驱动的，没有定时器，headless 里能直接截图验证（定时器和
+   IntersectionObserver 回调在 headless 的虚拟时间下都不触发）。
+
+   —— translate 而不是 transform ——
+   动画里改的是独立的 translate 属性，不是 transform。因为动画带 fill:both
+   会一直在生效状态，改写 transform 就等于永久占住这个属性，悬停抬起
+   （transform: translateY(-3px)）会被压掉。两个属性各管各的，就能叠着走。
+
+   —— 和主题自带的入场不冲突 ——
+   主题给 #content-inner 挂的 bottom-top 是**整页**推上来一次，作用在更外层
+   的元素上，不会和这里的逐张卡片叠在一起。
+
+   —— animation-range ——
+   到 entry 45% 就播完，不是 100%。这样「已经露出来大半」的卡片是实心的，
+   不会在首屏下沿留下一张半透明的卡；滚到哪张，哪张就刚好实心。
+   ------------------------------------------------------------ */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    #recent-posts .recent-post-item,
+    #aside-content .card-widget {
+      /* fill 是 forwards，**不是 both** —— 这一条是保命用的，别改成 both。
+         both 意味着「进入 range 之前也套用 from 状态」，也就是卡片在视口
+         下方还没轮到它的时候就被设成 opacity: 0。一旦滚动时间轴没能推进
+         （见下面那段说明），整页卡片就永远是透明的。
+         forwards 只负责「播完之后停住」，播之前不套任何样式 —— 于是卡片
+         没轮到的时候就是普通的 opacity: 1，最坏情况退化成「没有这个动效」。
+         代价只有一个：卡片刚碰到视口下沿的那一瞬间会从 1 跳到 0，但那一刻
+         它一像素都还没露出来（entry 0% 的定义就是「上边缘贴齐视口下边缘」），
+         所以跳变看不见。 */
+      animation: card-reveal .6s var(--ease-soft) forwards;
+      animation-timeline: view();
+      animation-range: entry 0% entry 45%;
+    }
+  }
+}
+
+@keyframes card-reveal {
+  from {
+    opacity: 0;
+    translate: 0 14px;
+  }
+
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+/* ------------------------------------------------------------
+   18. 横幅底部的波浪
+   ------------------------------------------------------------
+   压住横幅和下面内容之间那条硬边。做法是给 #page-header 挂一层 ::after，
+   里面是横向平铺的波形，填色取页面底色的浅色，透明度从浪尖到带底一路升
+   到不透明 —— 于是横幅看起来是「化」进下面的，而不是被切了一刀。
+
+   主题只用了 #page-header:before 放遮罩，::after 是空的，这里占它。
+   没有横幅的页面（.not-top-img）不画。
+
+   —— 为什么水画得那么低 ——
+   文章页的横幅底部不是空的：#post-info（标题 + 日期/分类/阅读量胶囊）
+   绝对定位在 bottom: 30px，所以整块占横幅底部 30~149px，而且标题是压在
+   深色壁纸上的白字。波浪要是从更高处涌上来，白字就压在了浅色带上，直接
+   看不见。
+
+   所以波形瓦片里的水只占瓦片下半部：浪尖在瓦片的 58%~65% 处，之上完全
+   透明 —— 浪尖以上的区域本来就什么都不画，那 30px 里有多少空间空着都不
+   影响胶囊。渲染到 60px（文章页）时浪尖只到横幅底部 21~25px，刚好让开。
+
+   其余页面（首页 / 归档 / 标签 / 关于）横幅底部没有文字 —— 标题分别在
+   43% 和 top: 200px 处 —— 带子给到 100px，浪尖到 35~42px，是一条像样的
+   起伏。两个高度共用同一张瓦片，靠 background-size 的高度 100% 缩放。
+
+   想调高低改下面这两个 --wave-h，不要动波形本身。
+
+   —— 两层 ——
+   慢层主周期 300（平缓），快层主周期 240（起伏大、相位错开 90°），叠在
+   一起才不像一条被拉直的绳子。两层各自又叠了第二条周期不同的正弦进去
+   （波形是两条正弦的和，不是单条），因为主周期缩短到 300 上下之后，单条
+   正弦一屏能看见四五个一模一样的浪，像饼干模子；叠一条进去浪高就有了
+   起伏。这部分在 tools/build_waves.py 里。
+
+   两个平移量都是瓦片宽 1200 的整数倍，循环到头时图案和开头一模一样 ——
+   接缝是设计出来的，不是碰巧。
+
+   —— 一处妥协 ——
+   带子底部不透明，颜色取的是页面渐变中段的一个固定值。而 #web_bg 是
+   fixed 的，横幅底边滚到视口不同位置时它背后的渐变色是会变的，所以这条
+   接缝理论上会有极淡的色差（最坏约 6/255）。取中段值就是把这个差值对半
+   摊到两端，实际看不出来。
+   ------------------------------------------------------------ */
+
+:root {
+  /* 带子的高度。文章页单独压到 60px，原因见上 */
+  --wave-h: 100px;
+  /* 一个循环的时长。两层共用这一个值 —— 快慢是靠平移量拉开的，不是靠
+     时长。想整体调快调慢改这里就行。 */
+  --wave-cycle: 80s;
+}
+
+#page-header.post-bg {
+  --wave-h: 60px;
+}
+
+#page-header:not(.not-top-img)::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: var(--wave-h);
+  /* 带子上压着首页那个下滑箭头（#scroll-down 在 bottom: 10px），
+     它得能点 */
+  pointer-events: none;
+  background-image: var(--wave-back), var(--wave-front);
+  background-repeat: repeat-x;
+  /* 高度 100%：瓦片纵向拉伸到当前带高，60px 和 100px 下都是等比缩放，
+     不用维护两套波形。两层宽度相同，所以一个值就够（少写的那层会沿用）。 */
+  background-size: 1200px 100%;
+  animation: wave-drift var(--wave-cycle) linear infinite;
+}
+
+/* 元素自身不位移，只动 background-position —— 位移会让这个通栏元素横向
+   溢出，撑出一条横向滚动条。
+   两个平移量都是瓦片宽的整数倍（1200 的 2 倍 / 3 倍），所以慢层一个循环
+   走 2 个瓦片、快层走 3 个，快 1/2。改平移量时必须保住这个整除关系，否则
+   循环接缝会跳一下。（瓦片内部还叠了两条周期不同的正弦，进一步压掉重复感，
+   那部分在 tools/build_waves.py 里。） */
+@keyframes wave-drift {
+  from {
+    background-position: 0 0, 0 0;
+  }
+
+  to {
+    background-position: -2400px 0, -3600px 0;
+  }
+}
+
+/* 沉浸阅读模式（.read-mode）下横幅的壁纸被主题清掉了（background: none），
+   #web_bg 也被藏了 —— 那块地方是一张平静的纯色画布，波浪画在上面既没有
+   壁纸可以「化」进去、下面也没有内容底色可以接，只会剩一道突兀的浅色带子。
+   阅读模式本来就该安静，这里不画。
+   这条必须排在上面那条之后：两者优先级相同（都是 1 个 id + 1 个类 + 1 个
+   伪元素），靠加载顺序取胜。 */
+.read-mode #page-header::after {
+  content: none;
+}
+
+/* 首页那个下滑箭头正好落在波浪带上，而且带子在它那个位置已经接近不透明。
+   亮色模式下 #EEEEEE 的箭头压在浅色带上等于隐形，换成主题紫；暗色模式
+   不用换 —— 那边的带子是深色的，浅色箭头仍然读得出来。
+   z-index 是必须的：::after 排在 #scroll-down 之后，不动它就会被盖住。 */
+#page-header #scroll-down {
+  z-index: 2;
+}
+
+[data-theme='light'] #page-header #scroll-down .scroll-down-effects {
+  color: var(--dusk-violet);
+}
+
+/* —— 波形瓦片 ——
+   两条 data URI，由 tools/build_waves.py 生成。想调周期 / 振幅 / 相位 /
+   色阶，改那个脚本里的常量再跑一次 —— 直接改下面这两行的话，下次跑脚本
+   就被覆盖了。 */
+:root {
+  /* @wave-generated light 由 tools/build_waves.py 生成，别手改 */
+  --wave-back: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%221200%22%20height%3D%2248%22%20viewBox%3D%220%200%201200%2048%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22w%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%220%22%20y2%3D%2248%22%20gradientUnits%3D%22userSpaceOnUse%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23F6F2F8%22%20stop-opacity%3D%22.10%22%2F%3E%3Cstop%20offset%3D%22.33%22%20stop-color%3D%22%23F6F2F8%22%20stop-opacity%3D%22.42%22%2F%3E%3Cstop%20offset%3D%22.66%22%20stop-color%3D%22%23F6F2F8%22%20stop-opacity%3D%22.74%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23F6F2F8%22%20stop-opacity%3D%221%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Cpath%20d%3D%22M0.0%2C36.5L10.0%2C37.4L20.0%2C38.0L30.0%2C38.5L40.0%2C38.8L50.0%2C38.9L60.0%2C38.8L70.0%2C38.6L80.0%2C38.3L90.0%2C37.9L100.0%2C37.4L110.0%2C36.9L120.0%2C36.4L130.0%2C35.9L140.0%2C35.5L150.0%2C35.0L160.0%2C34.5L170.0%2C34.1L180.0%2C33.6L190.0%2C33.1L200.0%2C32.6L210.0%2C32.1L220.0%2C31.7L230.0%2C31.4L240.0%2C31.2L250.0%2C31.1L260.0%2C31.2L270.0%2C31.5L280.0%2C32.0L290.0%2C32.6L300.0%2C33.5L310.0%2C34.5L320.0%2C35.6L330.0%2C36.8L340.0%2C37.9L350.0%2C38.9L360.0%2C39.7L370.0%2C40.4L380.0%2C40.7L390.0%2C40.7L400.0%2C40.4L410.0%2C39.8L420.0%2C38.9L430.0%2C37.7L440.0%2C36.4L450.0%2C35.0L460.0%2C33.6L470.0%2C32.3L480.0%2C31.1L490.0%2C30.2L500.0%2C29.6L510.0%2C29.3L520.0%2C29.3L530.0%2C29.6L540.0%2C30.3L550.0%2C31.1L560.0%2C32.1L570.0%2C33.2L580.0%2C34.4L590.0%2C35.5L600.0%2C36.5L610.0%2C37.4L620.0%2C38.0L630.0%2C38.5L640.0%2C38.8L650.0%2C38.9L660.0%2C38.8L670.0%2C38.6L680.0%2C38.3L690.0%2C37.9L700.0%2C37.4L710.0%2C36.9L720.0%2C36.4L730.0%2C35.9L740.0%2C35.5L750.0%2C35.0L760.0%2C34.5L770.0%2C34.1L780.0%2C33.6L790.0%2C33.1L800.0%2C32.6L810.0%2C32.1L820.0%2C31.7L830.0%2C31.4L840.0%2C31.2L850.0%2C31.1L860.0%2C31.2L870.0%2C31.5L880.0%2C32.0L890.0%2C32.6L900.0%2C33.5L910.0%2C34.5L920.0%2C35.6L930.0%2C36.8L940.0%2C37.9L950.0%2C38.9L960.0%2C39.7L970.0%2C40.4L980.0%2C40.7L990.0%2C40.7L1000.0%2C40.4L1010.0%2C39.8L1020.0%2C38.9L1030.0%2C37.7L1040.0%2C36.4L1050.0%2C35.0L1060.0%2C33.6L1070.0%2C32.3L1080.0%2C31.1L1090.0%2C30.2L1100.0%2C29.6L1110.0%2C29.3L1120.0%2C29.3L1130.0%2C29.6L1140.0%2C30.3L1150.0%2C31.1L1160.0%2C32.1L1170.0%2C33.2L1180.0%2C34.4L1190.0%2C35.5L1200.0%2C36.5L1200%2C48L0%2C48Z%22%20fill%3D%22url%28%23w%29%22%2F%3E%3C%2Fsvg%3E");
+  --wave-front: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%221200%22%20height%3D%2248%22%20viewBox%3D%220%200%201200%2048%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22w%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%220%22%20y2%3D%2248%22%20gradientUnits%3D%22userSpaceOnUse%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23F6F2F8%22%20stop-opacity%3D%22.10%22%2F%3E%3Cstop%20offset%3D%22.33%22%20stop-color%3D%22%23F6F2F8%22%20stop-opacity%3D%22.42%22%2F%3E%3Cstop%20offset%3D%22.66%22%20stop-color%3D%22%23F6F2F8%22%20stop-opacity%3D%22.74%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23F6F2F8%22%20stop-opacity%3D%221%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Cpath%20d%3D%22M0.0%2C45.5L10.0%2C45.7L20.0%2C45.5L30.0%2C45.0L40.0%2C44.2L50.0%2C43.2L60.0%2C42.0L70.0%2C40.8L80.0%2C39.6L90.0%2C38.6L100.0%2C37.7L110.0%2C37.2L120.0%2C36.9L130.0%2C36.9L140.0%2C37.3L150.0%2C37.9L160.0%2C38.7L170.0%2C39.7L180.0%2C40.8L190.0%2C41.8L200.0%2C42.8L210.0%2C43.5L220.0%2C44.0L230.0%2C44.2L240.0%2C44.0L250.0%2C43.5L260.0%2C42.7L270.0%2C41.7L280.0%2C40.4L290.0%2C39.0L300.0%2C37.5L310.0%2C36.1L320.0%2C34.9L330.0%2C33.9L340.0%2C33.2L350.0%2C32.9L360.0%2C33.0L370.0%2C33.6L380.0%2C34.5L390.0%2C35.7L400.0%2C37.2L410.0%2C39.0L420.0%2C40.8L430.0%2C42.6L440.0%2C44.2L450.0%2C45.7L460.0%2C46.8L470.0%2C47.5L480.0%2C47.9L490.0%2C47.8L500.0%2C47.3L510.0%2C46.4L520.0%2C45.1L530.0%2C43.7L540.0%2C42.0L550.0%2C40.3L560.0%2C38.7L570.0%2C37.2L580.0%2C36.0L590.0%2C35.1L600.0%2C34.5L610.0%2C34.3L620.0%2C34.5L630.0%2C35.0L640.0%2C35.8L650.0%2C36.8L660.0%2C38.0L670.0%2C39.2L680.0%2C40.4L690.0%2C41.4L700.0%2C42.3L710.0%2C42.8L720.0%2C43.1L730.0%2C43.1L740.0%2C42.7L750.0%2C42.1L760.0%2C41.3L770.0%2C40.3L780.0%2C39.2L790.0%2C38.2L800.0%2C37.3L810.0%2C36.5L820.0%2C36.0L830.0%2C35.8L840.0%2C36.0L850.0%2C36.5L860.0%2C37.3L870.0%2C38.3L880.0%2C39.6L890.0%2C41.0L900.0%2C42.5L910.0%2C43.9L920.0%2C45.1L930.0%2C46.1L940.0%2C46.8L950.0%2C47.1L960.0%2C47.0L970.0%2C46.4L980.0%2C45.5L990.0%2C44.3L1000.0%2C42.8L1010.0%2C41.0L1020.0%2C39.2L1030.0%2C37.4L1040.0%2C35.8L1050.0%2C34.3L1060.0%2C33.2L1070.0%2C32.5L1080.0%2C32.1L1090.0%2C32.2L1100.0%2C32.7L1110.0%2C33.6L1120.0%2C34.9L1130.0%2C36.3L1140.0%2C38.0L1150.0%2C39.7L1160.0%2C41.3L1170.0%2C42.8L1180.0%2C44.0L1190.0%2C44.9L1200.0%2C45.5L1200%2C48L0%2C48Z%22%20fill%3D%22url%28%23w%29%22%2F%3E%3C%2Fsvg%3E");
+  /* @wave-generated-end */
+}
+
+[data-theme='dark'] {
+  /* @wave-generated dark 由 tools/build_waves.py 生成，别手改 */
+  --wave-back: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%221200%22%20height%3D%2248%22%20viewBox%3D%220%200%201200%2048%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22w%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%220%22%20y2%3D%2248%22%20gradientUnits%3D%22userSpaceOnUse%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%2316141E%22%20stop-opacity%3D%22.10%22%2F%3E%3Cstop%20offset%3D%22.33%22%20stop-color%3D%22%2316141E%22%20stop-opacity%3D%22.42%22%2F%3E%3Cstop%20offset%3D%22.66%22%20stop-color%3D%22%2316141E%22%20stop-opacity%3D%22.74%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%2316141E%22%20stop-opacity%3D%221%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Cpath%20d%3D%22M0.0%2C36.5L10.0%2C37.4L20.0%2C38.0L30.0%2C38.5L40.0%2C38.8L50.0%2C38.9L60.0%2C38.8L70.0%2C38.6L80.0%2C38.3L90.0%2C37.9L100.0%2C37.4L110.0%2C36.9L120.0%2C36.4L130.0%2C35.9L140.0%2C35.5L150.0%2C35.0L160.0%2C34.5L170.0%2C34.1L180.0%2C33.6L190.0%2C33.1L200.0%2C32.6L210.0%2C32.1L220.0%2C31.7L230.0%2C31.4L240.0%2C31.2L250.0%2C31.1L260.0%2C31.2L270.0%2C31.5L280.0%2C32.0L290.0%2C32.6L300.0%2C33.5L310.0%2C34.5L320.0%2C35.6L330.0%2C36.8L340.0%2C37.9L350.0%2C38.9L360.0%2C39.7L370.0%2C40.4L380.0%2C40.7L390.0%2C40.7L400.0%2C40.4L410.0%2C39.8L420.0%2C38.9L430.0%2C37.7L440.0%2C36.4L450.0%2C35.0L460.0%2C33.6L470.0%2C32.3L480.0%2C31.1L490.0%2C30.2L500.0%2C29.6L510.0%2C29.3L520.0%2C29.3L530.0%2C29.6L540.0%2C30.3L550.0%2C31.1L560.0%2C32.1L570.0%2C33.2L580.0%2C34.4L590.0%2C35.5L600.0%2C36.5L610.0%2C37.4L620.0%2C38.0L630.0%2C38.5L640.0%2C38.8L650.0%2C38.9L660.0%2C38.8L670.0%2C38.6L680.0%2C38.3L690.0%2C37.9L700.0%2C37.4L710.0%2C36.9L720.0%2C36.4L730.0%2C35.9L740.0%2C35.5L750.0%2C35.0L760.0%2C34.5L770.0%2C34.1L780.0%2C33.6L790.0%2C33.1L800.0%2C32.6L810.0%2C32.1L820.0%2C31.7L830.0%2C31.4L840.0%2C31.2L850.0%2C31.1L860.0%2C31.2L870.0%2C31.5L880.0%2C32.0L890.0%2C32.6L900.0%2C33.5L910.0%2C34.5L920.0%2C35.6L930.0%2C36.8L940.0%2C37.9L950.0%2C38.9L960.0%2C39.7L970.0%2C40.4L980.0%2C40.7L990.0%2C40.7L1000.0%2C40.4L1010.0%2C39.8L1020.0%2C38.9L1030.0%2C37.7L1040.0%2C36.4L1050.0%2C35.0L1060.0%2C33.6L1070.0%2C32.3L1080.0%2C31.1L1090.0%2C30.2L1100.0%2C29.6L1110.0%2C29.3L1120.0%2C29.3L1130.0%2C29.6L1140.0%2C30.3L1150.0%2C31.1L1160.0%2C32.1L1170.0%2C33.2L1180.0%2C34.4L1190.0%2C35.5L1200.0%2C36.5L1200%2C48L0%2C48Z%22%20fill%3D%22url%28%23w%29%22%2F%3E%3C%2Fsvg%3E");
+  --wave-front: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%221200%22%20height%3D%2248%22%20viewBox%3D%220%200%201200%2048%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22w%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%220%22%20y2%3D%2248%22%20gradientUnits%3D%22userSpaceOnUse%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%2316141E%22%20stop-opacity%3D%22.10%22%2F%3E%3Cstop%20offset%3D%22.33%22%20stop-color%3D%22%2316141E%22%20stop-opacity%3D%22.42%22%2F%3E%3Cstop%20offset%3D%22.66%22%20stop-color%3D%22%2316141E%22%20stop-opacity%3D%22.74%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%2316141E%22%20stop-opacity%3D%221%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Cpath%20d%3D%22M0.0%2C45.5L10.0%2C45.7L20.0%2C45.5L30.0%2C45.0L40.0%2C44.2L50.0%2C43.2L60.0%2C42.0L70.0%2C40.8L80.0%2C39.6L90.0%2C38.6L100.0%2C37.7L110.0%2C37.2L120.0%2C36.9L130.0%2C36.9L140.0%2C37.3L150.0%2C37.9L160.0%2C38.7L170.0%2C39.7L180.0%2C40.8L190.0%2C41.8L200.0%2C42.8L210.0%2C43.5L220.0%2C44.0L230.0%2C44.2L240.0%2C44.0L250.0%2C43.5L260.0%2C42.7L270.0%2C41.7L280.0%2C40.4L290.0%2C39.0L300.0%2C37.5L310.0%2C36.1L320.0%2C34.9L330.0%2C33.9L340.0%2C33.2L350.0%2C32.9L360.0%2C33.0L370.0%2C33.6L380.0%2C34.5L390.0%2C35.7L400.0%2C37.2L410.0%2C39.0L420.0%2C40.8L430.0%2C42.6L440.0%2C44.2L450.0%2C45.7L460.0%2C46.8L470.0%2C47.5L480.0%2C47.9L490.0%2C47.8L500.0%2C47.3L510.0%2C46.4L520.0%2C45.1L530.0%2C43.7L540.0%2C42.0L550.0%2C40.3L560.0%2C38.7L570.0%2C37.2L580.0%2C36.0L590.0%2C35.1L600.0%2C34.5L610.0%2C34.3L620.0%2C34.5L630.0%2C35.0L640.0%2C35.8L650.0%2C36.8L660.0%2C38.0L670.0%2C39.2L680.0%2C40.4L690.0%2C41.4L700.0%2C42.3L710.0%2C42.8L720.0%2C43.1L730.0%2C43.1L740.0%2C42.7L750.0%2C42.1L760.0%2C41.3L770.0%2C40.3L780.0%2C39.2L790.0%2C38.2L800.0%2C37.3L810.0%2C36.5L820.0%2C36.0L830.0%2C35.8L840.0%2C36.0L850.0%2C36.5L860.0%2C37.3L870.0%2C38.3L880.0%2C39.6L890.0%2C41.0L900.0%2C42.5L910.0%2C43.9L920.0%2C45.1L930.0%2C46.1L940.0%2C46.8L950.0%2C47.1L960.0%2C47.0L970.0%2C46.4L980.0%2C45.5L990.0%2C44.3L1000.0%2C42.8L1010.0%2C41.0L1020.0%2C39.2L1030.0%2C37.4L1040.0%2C35.8L1050.0%2C34.3L1060.0%2C33.2L1070.0%2C32.5L1080.0%2C32.1L1090.0%2C32.2L1100.0%2C32.7L1110.0%2C33.6L1120.0%2C34.9L1130.0%2C36.3L1140.0%2C38.0L1150.0%2C39.7L1160.0%2C41.3L1170.0%2C42.8L1180.0%2C44.0L1190.0%2C44.9L1200.0%2C45.5L1200%2C48L0%2C48Z%22%20fill%3D%22url%28%23w%29%22%2F%3E%3C%2Fsvg%3E");
+  /* @wave-generated-end */
+}
+
+/* ------------------------------------------------------------
+   19. 降级兜底
+   系统开了「减少动态效果」时关掉位移和过渡。这是无障碍设置，不是审美
+   偏好，必须尊重。
+
+   这里原来还有一条 @supports not (backdrop-filter)。它守的是玻璃那套的
+   一个真实风险：老浏览器不支持 backdrop-filter 时模糊不生效，半透明的
+   卡片会直接压在壁纸上，正文对比度掉到读不了。
+   卡片现在是实心的，不依赖 backdrop-filter，那条兜底也就没有守的东西了 ——
+   删掉不是省事，是它已经不可能触发了。
+   ------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  #recent-posts .recent-post-item,
+  #aside-content .card-widget {
+    transition: none;
+  }
+
+  /* 波浪停住。不带子就不画了是另一个选择，但那样开关这个系统设置会改变
+     版面，停住更稳妥。 */
+  #page-header:not(.not-top-img)::after {
+    animation: none;
+  }
+
+  /* 卡片入场（第 17 节）已经由它自己的 @media (prefers-reduced-motion:
+     no-preference) 挡在外面了，这里不用再写一遍 —— 那一段是 scroll 驱动的
+     CSS 动画，没有脚本，也就没有「已经藏起来但回调没来」这种中间态需要救。 */
+
+  #recent-posts .recent-post-item:hover {
+    transform: none;
+  }
+}
+
+/* ------------------------------------------------------------
+   20. 粒子效果（canvas_nest）的暗色补偿
+   ------------------------------------------------------------
+   开关和参数都在 _config.butterfly.yml 的 canvas_nest 那一块，这里只补一件
+   配置补不了的事。
+
+   —— 为什么需要补 ——
+   连线的颜色是**构建期**写进 <script> 标签属性里的一个固定 RGB，脚本读它
+   画图，所以它没法跟着亮暗模式变。实测：亮色下（近白底）0.5 不透明度刚好，
+   暗色下压在 #17151F 上几乎看不见 —— 同一个紫在两种底色上的对比度差太远。
+
+   —— 为什么用 filter: brightness 而不是改 opacity ——
+   opacity 是脚本写成 inline style 的（style="...opacity:.5"），覆盖它要
+   !important，而且只是整体变淡变实，暗色下要的是「更亮」而不是「更实」。
+   brightness 只乘 RGB、不碰 alpha，所以连线「越近越实」的分布原样保留，
+   只是颜色被提亮到浅紫。
+
+   黑色的粒子点不会被一起提亮（0 × 任何数还是 0）—— 那是脚本的问题，
+   它从没给 canvas 的 fillStyle 赋过值，点一直是黑的；亮暗两种模式下都几乎
+   看不见，不是这里漏改。
+
+   选择器用 body > canvas:not([id])：脚本是 document.body.appendChild(canvas)，
+   所以它是 body 的直接子元素且没有 id。加 :not([id]) 是避开主题自己的
+   #ribbon-canvas（彩带特效，现在没开），免得哪天开了把它的颜色也提亮。 */
+[data-theme='dark'] body > canvas:not([id]) {
+  filter: brightness(2.6);
+}

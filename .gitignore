@@ -1,0 +1,15 @@
+.DS_Store
+Thumbs.db
+db.json
+*.log
+node_modules/
+public/
+.deploy*/
+_multiconfig.yml
+
+# 本地启动脚本，含 API Key，不要提交
+# 模板见 start.example.ps1
+start.ps1
+
+# 原始大图备份（压缩前的源文件，不参与发布）
+_originals/
